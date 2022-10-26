@@ -944,7 +944,6 @@ end
 ---Set the selection to the provided `row`
 ---@param row number
 function Picker:set_selection(row)
-	print('vvvv row', row)
   if not self.manager then
     return
   end

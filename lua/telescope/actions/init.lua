@@ -99,10 +99,6 @@ actions.results_win_select = {
       :append(action_state.get_current_line(), action_state.get_current_picker(prompt_bufnr))
   end,
   action = function(results_bufnr)
-		-- local cur_row, cur_col = unpack(vim.api.nvim_win_get_cursor(0))
-		-- print('vvvv cur_col', cur_col)
-		-- print('vvvv cur_row', cur_row)
-		-- print('vvvv glboal_prompt_bufnr', global_prompt_bufnr)
     return action_set.select(global_prompt_bufnr, "default")
   end,
 }

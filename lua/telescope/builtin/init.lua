@@ -33,11 +33,6 @@ local function require_on_exported_call(mod)
   return setmetatable({}, {
     __index = function(_, picker)
       return function(...)
-				-- print(debug.traceback())
-				-- print('vvvv mod', mod)
-				-- print('vvvv require(mod)', require(mod))
-				-- vim.pretty_print(require(mod))
-				-- print('vvvv picker', picker)
         return require(mod)[picker](...)
       end
     end,

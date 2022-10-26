@@ -151,9 +151,12 @@ mappings.default_mappings = config.values.default_mappings
       ["<Down>"] = actions.move_selection_next,
       ["<Up>"] = actions.move_selection_previous,
 
-		--hbchange
+		--<hbchange>
 			-- ["<CR>"] = actions.select_default,
 			["<CR>"] = actions.move_to_results_window,
+			["<S-CR>"] = actions.select_default, -- https://stackoverflow.com/questions/16359878/how-to-map-shift-enter
+			["<C-CR>"] = actions.select_default,
+		--</hbchange>
 
       ["<C-x>"] = actions.select_horizontal,
       ["<C-v>"] = actions.select_vertical,
@@ -180,9 +183,12 @@ mappings.default_mappings = config.values.default_mappings
 
     n = {
       ["<esc>"] = actions.close,
-		--hbchange
+		--<hbchange>
       -- ["<CR>"] = actions.select_default,
       ["<CR>"] = actions.move_to_results_window,
+			["<S-CR>"] = actions.select_default,
+			["<C-CR>"] = actions.select_default,
+		--</hbchange>
 
       ["<C-x>"] = actions.select_horizontal,
       ["<C-v>"] = actions.select_vertical,
@@ -355,9 +361,6 @@ end
 
 --hbchange
 mappings.apply_results_win_keymap = function(results_bufnr, prompt_bufnr, attach_mappings, buffer_keymap)
-	print('vvvv attach_mappings', attach_mappings)
-	print('vvvv prompt_bufnr', prompt_bufnr)
-	print('vvvv results_bufnr', results_bufnr)
   local applied_mappings = { n = {}, i = {} }
   local map = function(mode, key_bind, key_func, opts)
     mode = string.lower(mode)
@@ -417,7 +420,6 @@ mappings.apply_keymap = function(prompt_bufnr, attach_mappings, buffer_keymap)
   if attach_mappings then
     local attach_results = attach_mappings(prompt_bufnr, map)
 
-		print('vvvv attach_results', attach_results)
     if attach_results == nil then
       error(
         "Attach mappings must always return a value. `true` means use default mappings, "
@@ -430,13 +432,7 @@ mappings.apply_keymap = function(prompt_bufnr, attach_mappings, buffer_keymap)
     end
   end
 
-	-- print('vvvv buffer_keymap', buffer_keymap)
-	-- vim.pretty_print(buffer_keymap)
-
   for mode, mode_map in pairs(buffer_keymap or {}) do
-		-- print('vvvv mode_map', mode_map)
-  --   mode = string.lower(mode)
-
     for key_bind, key_func in pairs(mode_map) do
       local key_bind_internal = a.nvim_replace_termcodes(key_bind, true, true, true)
       if not applied_mappings[mode][key_bind_internal] then
