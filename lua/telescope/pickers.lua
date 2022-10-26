@@ -325,7 +325,6 @@ end
 function Picker:_create_window(bufnr, popup_opts, nowrap)
   local what = bufnr or ""
   local win, opts = popup.create(what, popup_opts)
-
   a.nvim_win_set_option(win, "winblend", self.window.winblend)
   a.nvim_win_set_option(win, "wrap", not nowrap)
   local border_win = opts and opts.border and opts.border.win_id
@@ -524,7 +523,8 @@ function Picker:find()
     nested = true,
     once = true,
     callback = function()
-      require("telescope.pickers").on_close_prompt(prompt_bufnr)
+			-- hbchange
+      -- require("telescope.pickers").on_close_prompt(prompt_bufnr)
     end,
   })
   vim.api.nvim_create_autocmd("VimResized", {
@@ -533,6 +533,19 @@ function Picker:find()
     nested = true,
     callback = function()
       require("telescope.pickers").on_resize_window(prompt_bufnr)
+    end,
+  })
+
+	--hbchange
+  vim.api.nvim_create_augroup("ResultsWin", {})
+  vim.api.nvim_create_autocmd("CursorMoved", {
+    buffer = results_bufnr,
+    group = "ResultsWin",
+    nested = true,
+    callback = function()
+			local cur_row, cur_col = unpack(vim.api.nvim_win_get_cursor(0))
+			local action_state = require('telescope.actions.state')
+			action_state.get_current_picker(prompt_bufnr):set_selection(cur_row-1)
     end,
   })
 
@@ -559,6 +572,8 @@ function Picker:find()
   )
 
   mappings.apply_keymap(prompt_bufnr, self.attach_mappings, config.values.mappings)
+	--hbchange
+	mappings.apply_results_win_keymap(results_bufnr, prompt_bufnr, self.attach_mappings, config.values.mappings)
 
   tx.send()
   main_loop()
@@ -929,6 +944,7 @@ end
 ---Set the selection to the provided `row`
 ---@param row number
 function Picker:set_selection(row)
+	print('vvvv row', row)
   if not self.manager then
     return
   end
@@ -1484,6 +1500,7 @@ function pickers.on_close_prompt(prompt_bufnr)
     event = "BufLeave",
     buffer = prompt_bufnr,
   }
+
   picker.close_windows(status)
   mappings.clear(prompt_bufnr)
 end

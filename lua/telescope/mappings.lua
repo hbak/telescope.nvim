@@ -127,6 +127,19 @@ local config = require "telescope.config"
 
 local mappings = {}
 
+-- <hbchange>
+mappings.results_win_mappings = {
+	n = {
+		["<CR>"] = actions.results_win_select,
+		["<C-v>"] = actions.select_vertical_from_results_win,
+		["<C-t>"] = actions.select_tab_from_results_win,
+		i = actions.move_to_prompt_win,
+		a = actions.move_to_prompt_win,
+		["<esc>"] = actions.close_from_results_win,
+	}
+}
+-- </hbchange>
+
 mappings.default_mappings = config.values.default_mappings
   or {
     i = {
@@ -138,7 +151,10 @@ mappings.default_mappings = config.values.default_mappings
       ["<Down>"] = actions.move_selection_next,
       ["<Up>"] = actions.move_selection_previous,
 
-      ["<CR>"] = actions.select_default,
+		--hbchange
+			-- ["<CR>"] = actions.select_default,
+			["<CR>"] = actions.move_to_results_window,
+
       ["<C-x>"] = actions.select_horizontal,
       ["<C-v>"] = actions.select_vertical,
       ["<C-t>"] = actions.select_tab,
@@ -164,7 +180,10 @@ mappings.default_mappings = config.values.default_mappings
 
     n = {
       ["<esc>"] = actions.close,
-      ["<CR>"] = actions.select_default,
+		--hbchange
+      -- ["<CR>"] = actions.select_default,
+      ["<CR>"] = actions.move_to_results_window,
+
       ["<C-x>"] = actions.select_horizontal,
       ["<C-v>"] = actions.select_vertical,
       ["<C-t>"] = actions.select_tab,
@@ -271,6 +290,59 @@ local telescope_map = function(prompt_bufnr, mode, key_bind, key_func, opts)
   a.nvim_buf_set_keymap(prompt_bufnr, mode, key_bind, map_string, opts)
 end
 
+
+local telescope_map_results_win = function(results_bufnr, prompt_bufnr, mode, key_bind, key_func, opts)
+  if not key_func then
+    return
+  end
+
+  opts = opts or {}
+  if opts.noremap == nil then
+    opts.noremap = true
+  end
+  if opts.silent == nil then
+    opts.silent = true
+  end
+
+  if type(key_func) == "string" then
+    key_func = actions[key_func]
+  elseif type(key_func) == "table" then
+    if key_func.type == "command" then
+      a.nvim_buf_set_keymap(results_bufnr, mode, key_bind, key_func[1], opts or {
+        silent = true,
+      })
+      return
+    elseif key_func.type == "action_key" then
+      key_func = actions[key_func[1]]
+    elseif key_func.type == "action" then
+      key_func = key_func[1]
+    end
+  end
+
+  -- local key_id = assign_function(prompt_bufnr, key_func)
+  local key_id = assign_function(results_bufnr, key_func)
+  local prefix
+
+  local map_string
+  if opts.expr then
+    map_string =
+      string.format([[luaeval("require('telescope.mappings').execute_keymap(%s, %s)")]], results_bufnr, key_id)
+  else
+    if mode == "i" and not opts.expr then
+      prefix = "<cmd>"
+    elseif mode == "n" then
+      prefix = ":<C-U>"
+    else
+      prefix = ":"
+    end
+
+    map_string =
+      string.format("%slua require('telescope.mappings').execute_keymap(%s, %s)<CR>", prefix, results_bufnr, key_id)
+  end
+
+  a.nvim_buf_set_keymap(results_bufnr, mode, key_bind, map_string, opts)
+end
+
 local extract_keymap_opts = function(key_func)
   if type(key_func) == "table" and key_func.opts ~= nil then
     -- we can't clear this because key_func could be a table from the config.
@@ -279,6 +351,56 @@ local extract_keymap_opts = function(key_func)
     return vim.deepcopy(key_func.opts)
   end
   return {}
+end
+
+--hbchange
+mappings.apply_results_win_keymap = function(results_bufnr, prompt_bufnr, attach_mappings, buffer_keymap)
+	print('vvvv attach_mappings', attach_mappings)
+	print('vvvv prompt_bufnr', prompt_bufnr)
+	print('vvvv results_bufnr', results_bufnr)
+  local applied_mappings = { n = {}, i = {} }
+  local map = function(mode, key_bind, key_func, opts)
+    mode = string.lower(mode)
+    local key_bind_internal = a.nvim_replace_termcodes(key_bind, true, true, true)
+    applied_mappings[mode][key_bind_internal] = true
+    telescope_map_results_win(results_bufnr, prompt_bufnr, mode, key_bind, key_func, opts)
+
+  end
+  if attach_mappings then
+    local attach_results = attach_mappings(results_bufnr, map)
+    if attach_results == nil then
+      error(
+        "Attach mappings must always return a value. `true` means use default mappings, "
+          .. "`false` means only use attached mappings"
+      )
+    end
+    if not attach_results then
+      return
+    end
+  end
+
+  for mode, mode_map in pairs(buffer_keymap or {}) do
+    for key_bind, key_func in pairs(mode_map) do
+      local key_bind_internal = a.nvim_replace_termcodes(key_bind, true, true, true)
+      if not applied_mappings[mode][key_bind_internal] then
+        applied_mappings[mode][key_bind_internal] = true
+        -- telescope_map(results_bufnr, mode, key_bind, key_func, extract_keymap_opts(key_func))
+				telescope_map_results_win(results_bufnr, prompt_bufnr, mode, key_bind, key_func, extract_keymap_opts(key_func))
+      end
+    end
+  end
+  -- TODO: Probably should not overwrite any keymaps
+  for mode, mode_map in pairs(mappings.results_win_mappings) do
+    mode = string.lower(mode)
+    for key_bind, key_func in pairs(mode_map) do
+      local key_bind_internal = a.nvim_replace_termcodes(key_bind, true, true, true)
+      if not applied_mappings[mode][key_bind_internal] then
+        applied_mappings[mode][key_bind_internal] = true
+        -- telescope_map(results_bufnr, mode, key_bind, key_func, extract_keymap_opts(key_func))
+				telescope_map_results_win(results_bufnr, prompt_bufnr, mode, key_bind, key_func, extract_keymap_opts(key_func))
+      end
+    end
+  end
 end
 
 mappings.apply_keymap = function(prompt_bufnr, attach_mappings, buffer_keymap)
@@ -295,6 +417,7 @@ mappings.apply_keymap = function(prompt_bufnr, attach_mappings, buffer_keymap)
   if attach_mappings then
     local attach_results = attach_mappings(prompt_bufnr, map)
 
+		print('vvvv attach_results', attach_results)
     if attach_results == nil then
       error(
         "Attach mappings must always return a value. `true` means use default mappings, "
@@ -307,8 +430,12 @@ mappings.apply_keymap = function(prompt_bufnr, attach_mappings, buffer_keymap)
     end
   end
 
+	-- print('vvvv buffer_keymap', buffer_keymap)
+	-- vim.pretty_print(buffer_keymap)
+
   for mode, mode_map in pairs(buffer_keymap or {}) do
-    mode = string.lower(mode)
+		-- print('vvvv mode_map', mode_map)
+  --   mode = string.lower(mode)
 
     for key_bind, key_func in pairs(mode_map) do
       local key_bind_internal = a.nvim_replace_termcodes(key_bind, true, true, true)

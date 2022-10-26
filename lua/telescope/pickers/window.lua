@@ -29,6 +29,8 @@ function p_window.get_initial_window_options(picker)
     title = picker.results_title,
     border = popup_border.results,
     borderchars = popup_borderchars.results,
+		-- hbchange
+		focusable = true,
     enter = false,
   }
 
@@ -36,7 +38,7 @@ function p_window.get_initial_window_options(picker)
     title = picker.prompt_title,
     border = popup_border.prompt,
     borderchars = popup_borderchars.prompt,
-    enter = true,
+		enter = true,
   }
 
   return {

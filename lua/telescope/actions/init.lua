@@ -75,6 +75,68 @@ local actions = setmetatable({}, {
   end,
 })
 
+--<hbchange>
+-- "global_prompt_bufnr" is terrible,
+-- the danger here being that if you select a result after
+-- jumping to results_win in another tab, it will close that picker
+-- instead?   (conjecture)
+-- need to somehow get execute_keymap and assign_function to
+-- be able to save/call keymaps on the results buffer while retaining
+-- the prompt_bufnr which is the master key
+-- 
+local global_prompt_bufnr;
+actions.move_to_results_window = function(prompt_bufnr)
+  local picker = action_state.get_current_picker(prompt_bufnr)
+	vim.api.nvim_set_current_win(picker.results_win)
+	global_prompt_bufnr = prompt_bufnr
+end
+-- actions.results_win_select = function(results_bufnr)
+actions.results_win_select = {
+	-- todo:  what is this "pre" for and what am I incorrectly messing with here?
+  pre = function(prompt_bufnr)
+    action_state
+      .get_current_history()
+      :append(action_state.get_current_line(), action_state.get_current_picker(prompt_bufnr))
+  end,
+  action = function(results_bufnr)
+		-- local cur_row, cur_col = unpack(vim.api.nvim_win_get_cursor(0))
+		-- print('vvvv cur_col', cur_col)
+		-- print('vvvv cur_row', cur_row)
+		-- print('vvvv glboal_prompt_bufnr', global_prompt_bufnr)
+    return action_set.select(global_prompt_bufnr, "default")
+  end,
+}
+
+actions.select_vertical_from_results_win = {
+  pre = function(prompt_bufnr)
+    action_state
+      .get_current_history()
+      :append(action_state.get_current_line(), action_state.get_current_picker(prompt_bufnr))
+  end,
+  action = function(results_bufnr)
+    return action_set.select(global_prompt_bufnr, "vertical")
+  end,
+}
+actions.select_tab_from_results_win = {
+  pre = function(results_bufnr)
+    action_state
+      .get_current_history()
+      :append(action_state.get_current_line(), action_state.get_current_picker(prompt_bufnr))
+  end,
+  action = function(results_bufnr)
+    return action_set.select(global_prompt_bufnr, "tab")
+  end,
+}
+actions.move_to_prompt_win = function(results_bufnr)
+  local picker = action_state.get_current_picker(global_prompt_bufnr)
+	vim.api.nvim_set_current_win(picker.prompt_win)
+end
+
+actions.close_from_results_win = function(results_bufnr)
+  actions.close(global_prompt_bufnr)
+end
+-- </hbchange>
+
 --- Move the selection to the next entry
 ---@param prompt_bufnr number: The prompt bufnr
 actions.move_selection_next = function(prompt_bufnr)
