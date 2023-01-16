@@ -109,7 +109,8 @@ end
 
 -- Percentages
 _resolve_map[function(val)
-  return type(val) == "number" and val >= 0 and val < 1
+	--hbchange
+  return type(val) == "number" and val >= 0 and val <= 1
 end] = function(selector, val)
   return function(...)
     local selected = select(selector, ...)
@@ -119,7 +120,8 @@ end
 
 -- Numbers
 _resolve_map[function(val)
-  return type(val) == "number" and val >= 1
+	--hbchange
+  return type(val) == "number" and val > 1
 end] = function(selector, val)
   return function(...)
     local selected = select(selector, ...)

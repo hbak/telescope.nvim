@@ -137,12 +137,23 @@ internal.resume = function(opts)
   end
   -- reset layout strategy and get_window_options if default as only one is valid
   -- and otherwise unclear which was actually set
-  if picker.layout_strategy == conf.layout_strategy then
-    picker.layout_strategy = nil
-  end
-  if picker.get_window_options == p_window.get_window_options then
-    picker.get_window_options = nil
-  end
+
+	-- hbchange:
+	-- - feat:  want to live-swap between vert and horizontal layouts
+	--   - chosen implementation:  exit current search, change configuration, then
+	--     run builtin.resume(), which is here
+	--     changed it so that it always reads what the configuration's layout strategy is
+
+  -- if picker.layout_strategy == conf.layout_strategy then
+  --   picker.layout_strategy = nil
+  -- end
+	picker.layout_strategy = conf.layout_strategy
+
+
+	if picker.get_window_options == p_window.get_window_options then
+		picker.get_window_options = nil
+	end
+
   picker.cache_picker.index = opts.cache_index
 
   -- avoid partial `opts.cache_picker` at picker creation
