@@ -211,7 +211,7 @@ end
 --- this function outside of telescope might yield to undefined behavior and will
 --- not be addressed by us
 ---@param opts table: The opts the users passed into the picker. Might contains a path_display key
----@param path string: The path that should be formated
+---@param path string: The path that should be formatted
 ---@return string: The transformed path ready to be displayed
 utils.transform_path = function(opts, path)
   if path == nil then
@@ -460,13 +460,14 @@ utils.transform_devicons = load_once(function()
       local icon, icon_highlight = devicons.get_icon(basename, utils.file_extension(basename), { default = false })
       if not icon then
         icon, icon_highlight = devicons.get_icon(basename, nil, { default = true })
+        icon = icon or " "
       end
-      local icon_display = (icon or " ") .. " " .. (display or "")
+      local icon_display = icon .. " " .. (display or "")
 
       if conf.color_devicons then
-        return icon_display, icon_highlight
+        return icon_display, icon_highlight, icon
       else
-        return icon_display, nil
+        return icon_display, nil, icon
       end
     end
   else

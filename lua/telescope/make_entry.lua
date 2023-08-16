@@ -11,24 +11,23 @@
 --- an entry. This function will return an entry table (or nil, meaning skip
 --- this entry) which contains the following important keys:
 --- - value any: value key can be anything but still required
---- - valid bool: is an optional key because it defaults to true but if the key
----   is set to false it will not be displayed by the picker (optional)
---- - ordinal string: is the text that is used for filtering (required)
+--- - valid bool (optional): is an optional key because it defaults to true but if the key
+---   is set to false it will not be displayed by the picker
+--- - ordinal string: is the text that is used for filtering
 --- - display string|function: is either a string of the text that is being
 ---   displayed or a function receiving the entry at a later stage, when the entry
 ---   is actually being displayed. A function can be useful here if a complex
----   calculation has to be done. `make_entry` can also return a second value
+---   calculation has to be done. `make_entry` can also return a second value -
 ---   a highlight array which will then apply to the line. Highlight entry in
 ---   this array has the following signature `{ { start_col, end_col }, hl_group }`
----   (required)
---- - filename string: will be interpreted by the default `<cr>` action as
----   open this file (optional)
---- - bufnr number: will be interpreted by the default `<cr>` action as open
----   this buffer (optional)
---- - lnum number: lnum value which will be interpreted by the default `<cr>`
----   action as a jump to this line (optional)
---- - col number: col value which will be interpreted by the default `<cr>`
----   action as a jump to this column (optional)
+--- - filename string (optional): will be interpreted by the default `<cr>` action as
+---   open this file
+--- - bufnr number (optional): will be interpreted by the default `<cr>` action as open
+---   this buffer
+--- - lnum number (optional): lnum value which will be interpreted by the default `<cr>`
+---   action as a jump to this line
+--- - col number (optional): col value which will be interpreted by the default `<cr>`
+---   action as a jump to this column
 ---
 --- For more information on easier displaying, see |telescope.pickers.entry_display|
 ---
@@ -158,13 +157,13 @@ do
 
     mt_file_entry.cwd = cwd
     mt_file_entry.display = function(entry)
-      local hl_group
+      local hl_group, icon
       local display = utils.transform_path(opts, entry.value)
 
-      display, hl_group = utils.transform_devicons(entry.value, display, disable_devicons)
+      display, hl_group, icon = utils.transform_devicons(entry.value, display, disable_devicons)
 
       if hl_group then
-        return display, { { { 1, 3 }, hl_group } }
+        return display, { { { 0, #icon }, hl_group } }
       else
         return display
       end
@@ -192,15 +191,8 @@ do
       return rawget(t, rawget(lookup_keys, k))
     end
 
-    if opts.file_entry_encoding then
-      return function(line)
-        line = vim.iconv(line, opts.file_entry_encoding, "utf8")
-        return setmetatable({ line }, mt_file_entry)
-      end
-    else
-      return function(line)
-        return setmetatable({ line }, mt_file_entry)
-      end
+    return function(line)
+      return setmetatable({ line }, mt_file_entry)
     end
   end
 end
@@ -327,14 +319,15 @@ do
           end
         end
 
-        local display, hl_group = utils.transform_devicons(
+        local text = opts.file_encoding and vim.iconv(entry.text, opts.file_encoding, "utf8") or entry.text
+        local display, hl_group, icon = utils.transform_devicons(
           entry.filename,
-          string.format(display_string, display_filename, coordinates, entry.text),
+          string.format(display_string, display_filename, coordinates, text),
           disable_devicons
         )
 
         if hl_group then
-          return display, { { { 1, 3 }, hl_group } }
+          return display, { { { 0, #icon }, hl_group } }
         else
           return display
         end
@@ -431,27 +424,17 @@ function make_entry.gen_from_git_commits(opts)
       return nil
     end
 
-    local marker, sha, msg = string.match(entry, "([*\\/| ]+) +([0-9a-f]*) +(.*)")
-
-    if not sha then
-      marker = entry
-      sha = ""
-      msg = ""
-    end
+    local sha, msg = string.match(entry, "([^ ]+) (.+)")
 
     if not msg then
+      sha = entry
       msg = "<empty commit message>"
     end
 
-    marker, _ = string.gsub(marker, "\\", "+")
-    marker, _ = string.gsub(marker, "/", "-")
-    marker, _ = string.gsub(marker, "+", "/")
-    marker, _ = string.gsub(marker, "-", "\\")
-
     return make_entry.set_default_entry_mt({
       value = sha,
-      ordinal = marker .. " " .. sha .. " " .. msg,
-      msg = marker .. " " .. msg,
+      ordinal = sha .. " " .. msg,
+      msg = msg,
       display = make_display,
       current_file = opts.current_file,
     }, opts)
@@ -707,8 +690,7 @@ function make_entry.gen_from_treesitter(opts)
 
   local get_filename = get_filename_fn()
   return function(entry)
-    local ts_utils = require "nvim-treesitter.ts_utils"
-    local start_row, start_col, end_row, _ = ts_utils.get_node_range(entry.node)
+    local start_row, start_col, end_row, _ = vim.treesitter.get_node_range(entry.node)
     local node_text = vim.treesitter.get_node_text(entry.node, bufnr)
     return make_entry.set_default_entry_mt({
       value = entry.node,
@@ -832,7 +814,7 @@ function make_entry.gen_from_registers(opts)
   end
 
   return function(entry)
-    local contents = vim.fn.getreg(entry)
+    local contents = vim.fn.getreg(entry, 1)
     return make_entry.set_default_entry_mt({
       value = entry,
       ordinal = string.format("%s %s", entry, contents),
@@ -845,7 +827,7 @@ end
 function make_entry.gen_from_keymaps(opts)
   local function get_desc(entry)
     if entry.callback and not entry.desc then
-      return require("telescope.actions.utils")._get_anon_function_name(entry.callback)
+      return require("telescope.actions.utils")._get_anon_function_name(debug.getinfo(entry.callback))
     end
     return vim.F.if_nil(entry.desc, entry.rhs)
   end
@@ -854,23 +836,11 @@ function make_entry.gen_from_keymaps(opts)
     return utils.display_termcodes(entry.lhs)
   end
 
-  local function get_attr(entry)
-    local ret = ""
-    if entry.value.noremap ~= 0 then
-      ret = ret .. "*"
-    end
-    if entry.value.buffer ~= 0 then
-      ret = ret .. "@"
-    end
-    return ret
-  end
-
   local displayer = require("telescope.pickers.entry_display").create {
     separator = "▏",
     items = {
-      { width = 3 },
-      { width = opts.width_lhs },
       { width = 2 },
+      { width = opts.width_lhs },
       { remaining = true },
     },
   }
@@ -878,7 +848,6 @@ function make_entry.gen_from_keymaps(opts)
     return displayer {
       entry.mode,
       get_lhs(entry),
-      get_attr(entry),
       get_desc(entry),
     }
   end
