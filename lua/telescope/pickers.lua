@@ -523,8 +523,15 @@ function Picker:find()
     nested = true,
     once = true,
     callback = function()
-			-- hbchange
+			-- hbchange: point of this fork is to be able to leave prompt -> results
       -- require("telescope.pickers").on_close_prompt(prompt_bufnr)
+
+			-- TODO:  are we creating a leak here?
+			-- idea:  if moved-to buf is anything other than results_buf, then close
+			-- prompt
+			-- doesn't work: can't compare moved-to buf to results_buf b/c
+			-- nvim_get_current_buf is still prompt buf on BufLeave
+			-- also this autocmd (PickerInsert group) is cleared
     end,
   })
   vim.api.nvim_create_autocmd("VimResized", {
@@ -536,7 +543,7 @@ function Picker:find()
     end,
   })
 
-	--hbchange
+	--<hbchange>
   vim.api.nvim_create_augroup("ResultsWin", {})
   vim.api.nvim_create_autocmd("CursorMoved", {
     buffer = results_bufnr,
@@ -548,6 +555,7 @@ function Picker:find()
 			action_state.get_current_picker(prompt_bufnr):set_selection(cur_row-1)
     end,
   })
+	--</hbchange>
 
   self.prompt_bufnr = prompt_bufnr
 
@@ -571,10 +579,13 @@ function Picker:find()
     })
   )
 
-  mappings.apply_keymap(prompt_bufnr, self.attach_mappings, config.values.mappings)
-	--hbchange
+	mappings.apply_keymap(prompt_bufnr, self.attach_mappings, config.values.mappings)
+
+	--<hbchange>
 	local mappings_fork = require "telescope.mappings_fork_additions"
-	mappings_fork.apply_results_win_keymap(results_bufnr, self.attach_mappings, config.values.mappings)
+	mappings_fork.apply_results_win_keymap(results_bufnr, prompt_bufnr, self.attach_mappings, mappings_fork.results_win_mappings)
+	mappings.apply_keymap(prompt_bufnr, self.attach_mappings, mappings_fork.prompt_win_mappings)
+	--</hbchange>
 
   tx.send()
   main_loop()
@@ -1452,6 +1463,9 @@ end
 function pickers.on_close_prompt(prompt_bufnr)
   local status = state.get_status(prompt_bufnr)
   local picker = status.picker
+	if picker == nil then
+		return
+	end
   require("telescope.actions.state").get_current_history():reset()
 
   if type(picker.cache_picker) == "table" then

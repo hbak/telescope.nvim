@@ -141,9 +141,8 @@ mappings.default_mappings = config.values.default_mappings
       ["<Down>"] = actions.move_selection_next,
       ["<Up>"] = actions.move_selection_previous,
 
-		--<hbchange>
+		--<hbchange> change default select from <CR> to <S-CR> and <C-CR>
 			-- ["<CR>"] = actions.select_default,
-			["<CR>"] = actions.move_to_results_window,
 			["<S-CR>"] = actions.select_default, -- https://stackoverflow.com/questions/16359878/how-to-map-shift-enter
 			["<C-CR>"] = actions.select_default,
 		--</hbchange>
@@ -173,9 +172,8 @@ mappings.default_mappings = config.values.default_mappings
 
     n = {
       ["<esc>"] = actions.close,
-		--<hbchange>
+		--<hbchange> change default select from <CR> to <S-CR> and <C-CR>
       -- ["<CR>"] = actions.select_default,
-      ["<CR>"] = actions.move_to_results_window,
 			["<S-CR>"] = actions.select_default,
 			["<C-CR>"] = actions.select_default,
 		--</hbchange>
