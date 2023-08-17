@@ -5,12 +5,12 @@ local mappings = {}
 -- TODO: merge with user configuration?
 mappings.results_win_mappings = {
 	n = {
-		["<CR>"] = actions.results_win_select,
-		["<C-v>"] = actions.results_win_vertical_select,
-		["<C-t>"] = actions.results_win_tab_select,
+		["<CR>"] = actions.select_default,
+		["<C-v>"] = actions.select_vertical,
+		["<C-t>"] = actions.select_tab,
 		i = actions.move_to_prompt_win,
 		a = actions.move_to_prompt_win,
-		["<esc>"] = actions.results_win_close,
+		["<esc>"] = actions.close,
 	}
 }
 
@@ -111,7 +111,6 @@ mappings.apply_results_win_keymap = function(results_bufnr, prompt_bufnr, attach
   end
 
 	if attach_mappings then
-		vim.pretty_print(attach_mappings)
 		local attach_results = attach_mappings(results_bufnr, map)
 		if attach_results == nil then
 			error(

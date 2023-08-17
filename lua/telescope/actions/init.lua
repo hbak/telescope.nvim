@@ -89,33 +89,9 @@ actions.move_to_results_window = function(prompt_bufnr)
 	vim.api.nvim_set_current_win(picker.results_win)
 end
 
-actions.results_win_select = {
-	-- todo:  what is this "pre" for and what am I incorrectly messing with here?
-  pre = append_to_history,
-  action = function(prompt_bufnr)
-    return action_set.select(prompt_bufnr, "default")
-  end,
-}
-
-actions.results_win_vertical_select = {
-  pre = append_to_history,
-  action = function(prompt_bufnr)
-    return action_set.select(prompt_bufnr, "vertical")
-  end,
-}
-actions.results_win_tab_select = {
-  pre = append_to_history,
-  action = function(prompt_bufnr)
-    return action_set.select(prompt_bufnr, "tab")
-  end,
-}
 actions.move_to_prompt_win = function(prompt_bufnr)
   local picker = action_state.get_current_picker(prompt_bufnr)
 	vim.api.nvim_set_current_win(picker.prompt_win)
-end
-
-actions.results_win_close = function(prompt_bufnr)
-  actions.close(prompt_bufnr)
 end
 -- </hbchange>
 
