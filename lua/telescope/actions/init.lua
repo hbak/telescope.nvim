@@ -87,6 +87,7 @@ end
 actions.move_to_results_window = function(prompt_bufnr)
 	local picker = action_state.get_current_picker(prompt_bufnr)
 	vim.api.nvim_set_current_win(picker.results_win)
+	vim.api.nvim_win_set_cursor(picker.results_win, {picker._selection_row + 1, 0})
 end
 
 actions.move_to_prompt_win = function(prompt_bufnr)
